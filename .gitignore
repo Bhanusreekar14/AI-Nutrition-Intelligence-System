@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production / Build
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python ML Model artifacts & Data (large files)
+ml/data/
+ml/models/*.pkl
+ml/models/*.cbm
+ml/models/*.joblib
+
+# IDE & OS
+.DS_Store
+.vscode/
+.idea/
+*.swp

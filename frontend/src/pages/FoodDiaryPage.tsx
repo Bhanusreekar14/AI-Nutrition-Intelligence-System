@@ -1,10 +1,24 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
-import { getFoodDiaryEntries, createFoodDiaryEntry, deleteFoodDiaryEntry, getDailyNutritionSummary } from '../services/api';
-import { FoodDiaryEntry, DailyNutritionSummary } from '../types';
+import { 
+  getFoodDiaryEntries, 
+  createFoodDiaryEntry, 
+  deleteFoodDiaryEntry, 
+  getDailyNutritionSummary,
+  getMyHealthProfile 
+} from '../services/api';
+import { FoodDiaryEntry, DailyNutritionSummary, HealthProfile } from '../types';
+import { 
+  calculateMacroTargets, 
+  calculateCalorieProgress, 
+  getNutritionStatus, 
+  generateNutritionInsights 
+} from '../utils/nutrition';
 import { 
   Calendar, ChevronLeft, ChevronRight, Plus, Trash2, 
-  Utensils, Coffee, Moon, PieChart 
+  Utensils, Coffee, Moon, PieChart, Target, Sparkles, 
+  AlertTriangle, Info, ArrowUpRight, CheckCircle2 
 } from 'lucide-react';
 
 export const FoodDiaryPage: React.FC = () => {
@@ -18,6 +32,7 @@ export const FoodDiaryPage: React.FC = () => {
     total_fat_g: 0,
     entry_count: 0,
   });
+  const [healthProfile, setHealthProfile] = useState<HealthProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -39,12 +54,17 @@ export const FoodDiaryPage: React.FC = () => {
   const fetchDiaryData = async () => {
     try {
       setLoading(true);
-      const [fetchedEntries, fetchedSummary] = await Promise.all([
+      const [fetchedEntries, fetchedSummary, fetchedProfile] = await Promise.all([
         getFoodDiaryEntries(selectedDate),
         getDailyNutritionSummary(selectedDate),
+        getMyHealthProfile().catch((err) => {
+          console.warn('Could not fetch health profile:', err);
+          return null;
+        }),
       ]);
       setEntries(fetchedEntries);
       setSummary(fetchedSummary);
+      setHealthProfile(fetchedProfile);
     } catch (err) {
       console.error('Error loading diary data:', err);
     } finally {
@@ -74,7 +94,7 @@ export const FoodDiaryPage: React.FC = () => {
         fat_g: Number(fatG),
       });
 
-      // Reset form & reload
+      // Reset form & reload data
       setFoodName('');
       setShowAddModal(false);
       await fetchDiaryData();
@@ -106,19 +126,32 @@ export const FoodDiaryPage: React.FC = () => {
     snack: <PieChart size={20} color="var(--primary-teal)" />,
   };
 
+  // Dynamic Intelligence Calculations
+  const tdee = healthProfile?.tdee || 0;
+  const calorieProgress = calculateCalorieProgress(summary.total_calories, tdee);
+  const macroTargets = calculateMacroTargets(tdee);
+  const nutritionStatus = getNutritionStatus(summary.total_calories, tdee);
+  const insights = generateNutritionInsights(summary.total_calories, tdee, summary, macroTargets);
+
+  // Macro progress helper
+  const getMacroProgress = (consumed: number, target: number) => {
+    if (!target || target <= 0) return 0;
+    return Math.min(100, Math.round((consumed / target) * 100));
+  };
+
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh', paddingBottom: '3rem' }}>
       <Navbar />
 
       <main className="app-container" style={{ marginTop: '1rem' }}>
         {/* Header & Date Picker */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <Utensils size={28} color="var(--primary-emerald)" /> Daily Food Diary
+              <Utensils size={28} color="var(--primary-emerald)" /> Nutrition Intelligence Dashboard
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-              Log meals and track macronutrients & daily caloric intake.
+              Track daily meals, monitor macro targets, and view rule-based nutrition progress.
             </p>
           </div>
 
@@ -150,39 +183,238 @@ export const FoodDiaryPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Macro Summary Dashboard Cards */}
-        <div className="grid-4" style={{ marginBottom: '2rem' }}>
-          <div className="glass-card" style={{ padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Calories</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginTop: '0.2rem' }}>
-              {summary.total_calories} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>kcal</span>
+        {/* Missing Health Profile Warning Banner */}
+        {(!healthProfile || !healthProfile.tdee) && !loading && (
+          <div style={{
+            background: 'rgba(251, 191, 36, 0.1)',
+            border: '1px solid rgba(251, 191, 36, 0.3)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fcd34d', fontSize: '0.9rem' }}>
+              <AlertTriangle size={20} />
+              <span>
+                <strong>Health Profile Incomplete:</strong> Complete your Health Profile to unlock your personalized Daily Calorie Target (TDEE) and macro goals.
+              </span>
+            </div>
+            <Link to="/profile" className="btn-secondary" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+              Setup Profile <ArrowUpRight size={16} />
+            </Link>
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* NUTRITION OVERVIEW DASHBOARD */}
+        {/* ==================================================== */}
+        <div className="glass-card" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
+          {/* Header Row: Title & Status Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <Target size={22} color="var(--primary-emerald)" />
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                Today's Calorie & Macro Target Progress
+              </h2>
+            </div>
+
+            {/* Nutrition Status Badge */}
+            <div style={{
+              background: nutritionStatus.bg,
+              color: nutritionStatus.color,
+              border: `1px solid ${nutritionStatus.color}40`,
+              borderRadius: '20px',
+              padding: '0.4rem 0.9rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              letterSpacing: '0.03em'
+            }}>
+              <span>{nutritionStatus.icon}</span>
+              <span>{nutritionStatus.label}</span>
             </div>
           </div>
 
-          <div className="glass-card" style={{ padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Protein</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#34d399', marginTop: '0.2rem' }}>
-              {summary.total_protein_g} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>g</span>
+          {/* Calorie Stats Grid */}
+          <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
+            {/* 1. Daily Calorie Target */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--bg-card-border)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                Daily Calorie Target
+              </div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', marginTop: '0.25rem' }}>
+                {tdee > 0 ? (
+                  <>{tdee} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>kcal</span></>
+                ) : (
+                  <span style={{ fontSize: '1.1rem', color: 'var(--text-dim)' }}>Not Configured</span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                {tdee > 0 ? 'Calculated from TDEE profile' : 'Complete health profile to set'}
+              </div>
+            </div>
+
+            {/* 2. Consumed Calories */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--bg-card-border)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                Consumed
+              </div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.25rem' }}>
+                {summary.total_calories} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>kcal</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                {summary.entry_count} food entry logged today
+              </div>
+            </div>
+
+            {/* 3. Remaining Calories */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--bg-card-border)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                Remaining
+              </div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: calorieProgress.excess > 0 ? '#f43f5e' : '#34d399', marginTop: '0.25rem' }}>
+                {tdee > 0 ? (
+                  calorieProgress.excess > 0 ? (
+                    <>0 <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>kcal</span></>
+                  ) : (
+                    <>{calorieProgress.remaining} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>kcal</span></>
+                  )
+                ) : (
+                  <span style={{ fontSize: '1.1rem', color: 'var(--text-dim)' }}>—</span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: calorieProgress.excess > 0 ? '#fda4af' : 'var(--text-muted)', marginTop: '0.3rem', fontWeight: calorieProgress.excess > 0 ? 600 : 400 }}>
+                {tdee > 0 ? (
+                  calorieProgress.excess > 0 ? `${calorieProgress.excess} kcal over target` : `${calorieProgress.percentage}% of daily goal consumed`
+                ) : (
+                  'TDEE goal required'
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="glass-card" style={{ padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Carbohydrates</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.2rem' }}>
-              {summary.total_carbs_g} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>g</span>
+          {/* Calorie Visual Progress Bar */}
+          {tdee > 0 && (
+            <div style={{ marginBottom: '1.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>
+                <span>Calorie Goal Progress</span>
+                <span style={{ fontWeight: 600, color: '#fff' }}>{summary.total_calories} / {tdee} kcal ({calorieProgress.percentage}%)</span>
+              </div>
+              <div style={{ height: '10px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '5px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${calorieProgress.visualPercentage}%`,
+                  background: calorieProgress.excess > 0 
+                    ? 'linear-gradient(90deg, #f59e0b 0%, #f43f5e 100%)' 
+                    : 'linear-gradient(90deg, #10b981 0%, #34d399 100%)',
+                  borderRadius: '5px',
+                  transition: 'width 0.5s ease-in-out'
+                }} />
+              </div>
+            </div>
+          )}
+
+          {/* Suggested Daily Macro Targets Section */}
+          <div style={{ borderTop: '1px solid var(--bg-card-border)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                Suggested Daily Macro Targets
+              </h3>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Based on 20% Protein • 50% Carbs • 30% Fat distribution
+              </span>
+            </div>
+
+            <div className="grid-3">
+              {/* Protein Progress */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--bg-card-border)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, color: '#34d399', marginBottom: '0.3rem' }}>
+                  <span>Protein</span>
+                  <span>{summary.total_protein_g} / {macroTargets.protein_g} g</span>
+                </div>
+                <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${getMacroProgress(summary.total_protein_g, macroTargets.protein_g)}%`,
+                    background: '#34d399',
+                    borderRadius: '3px',
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+              </div>
+
+              {/* Carbohydrates Progress */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--bg-card-border)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, color: '#38bdf8', marginBottom: '0.3rem' }}>
+                  <span>Carbohydrates</span>
+                  <span>{summary.total_carbs_g} / {macroTargets.carbs_g} g</span>
+                </div>
+                <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${getMacroProgress(summary.total_carbs_g, macroTargets.carbs_g)}%`,
+                    background: '#38bdf8',
+                    borderRadius: '3px',
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+              </div>
+
+              {/* Fat Progress */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--bg-card-border)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, color: '#fbbf24', marginBottom: '0.3rem' }}>
+                  <span>Fat</span>
+                  <span>{summary.total_fat_g} / {macroTargets.fat_g} g</span>
+                </div>
+                <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${getMacroProgress(summary.total_fat_g, macroTargets.fat_g)}%`,
+                    background: '#fbbf24',
+                    borderRadius: '3px',
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="glass-card" style={{ padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fats</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24', marginTop: '0.2rem' }}>
-              {summary.total_fat_g} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>g</span>
+          {/* Today's Nutrition Insights */}
+          <div style={{ borderTop: '1px solid var(--bg-card-border)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.8rem' }}>
+              <Sparkles size={18} color="var(--primary-teal)" />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                Today's Nutrition Insights
+              </h3>
+            </div>
+
+            <div style={{ background: 'rgba(15, 23, 42, 0.4)', borderRadius: 'var(--radius-md)', padding: '1rem 1.25rem', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <ul style={{ margin: 0, paddingLeft: '1.25rem', color: 'var(--text-light)', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {insights.map((insight, idx) => (
+                  <li key={idx} style={{ lineHeight: '1.4' }}>{insight}</li>
+                ))}
+              </ul>
+
+              {/* Informational Disclaimer */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-dim)', fontSize: '0.78rem', marginTop: '0.8rem', borderTop: '1px dotted rgba(255, 255, 255, 0.1)', paddingTop: '0.6rem' }}>
+                <Info size={14} />
+                <span>These insights are informational and are not medical advice.</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Action Button to Log Food */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+            Logged Meals
+          </h2>
           <button className="btn-primary" onClick={() => setShowAddModal(true)}>
             <Plus size={18} /> Log Food Entry
           </button>

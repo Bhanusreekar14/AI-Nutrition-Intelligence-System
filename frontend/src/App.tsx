@@ -4,8 +4,12 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { HomePage } from './pages/HomePage';
 import { HealthProfilePage } from './pages/HealthProfilePage';
 import { FoodDiaryPage } from './pages/FoodDiaryPage';
+import { SymptomsPage } from './pages/SymptomsPage';
+import { BloodTestPage } from './pages/BloodTestPage';
+import { PredictionPage } from './pages/PredictionPage';
 
 export const App: React.FC = () => {
   return (
@@ -17,6 +21,14 @@ export const App: React.FC = () => {
           <Route path="/register" element={<RegisterPage />} />
 
           {/* Protected Application Routes */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/profile"
             element={
@@ -33,10 +45,33 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/symptoms"
+            element={
+              <ProtectedRoute>
+                <SymptomsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/blood-tests"
+            element={
+              <ProtectedRoute>
+                <BloodTestPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/predict"
+            element={
+              <ProtectedRoute>
+                <PredictionPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Root Redirect */}
-          <Route path="/" element={<Navigate to="/diary" replace />} />
-          <Route path="*" element={<Navigate to="/diary" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

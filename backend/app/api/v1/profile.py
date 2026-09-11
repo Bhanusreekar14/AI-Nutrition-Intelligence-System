@@ -10,18 +10,16 @@ def calculate_bmr_tdee(profile: dict) -> tuple[float, float]:
     """
     Calculates BMR using Mifflin-St Jeor Equation and TDEE based on activity level.
     """
-    weight = profile["weight_kg"]
-    height = profile["height_cm"]
-    age = profile["age"]
-    gender = profile["gender"]
+    weight = profile.get("weight_kg", 70.0)
+    height = profile.get("height_cm", 170.0)
+    age = profile.get("age", 25)
+    gender = profile.get("gender", "other")
     
-    # BMR Calculation (Mifflin-St Jeor)
     if gender == "male":
         bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5
     elif gender == "female":
         bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161
     else:
-        # Neutral average
         bmr = (10 * weight) + (6.25 * height) - (5 * age) - 78
         
     activity_multipliers = {
@@ -31,7 +29,7 @@ def calculate_bmr_tdee(profile: dict) -> tuple[float, float]:
         "very_active": 1.725,
         "extra_active": 1.9
     }
-    multiplier = activity_multipliers.get(profile.get("activity_level", "sedentary"), 1.2)
+    multiplier = activity_multipliers.get(profile.get("activity_level", "moderately_active"), 1.55)
     tdee = bmr * multiplier
     return round(bmr, 2), round(tdee, 2)
 
@@ -63,16 +61,13 @@ def upsert_health_profile(
     payload = profile_in.model_dump()
     payload["user_id"] = user_id
     
-    # Check existing profile
     res = supabase.table("health_profiles").select("id").eq("user_id", user_id).execute()
     
     if res.data:
-        # Update existing
         profile_id = res.data[0]["id"]
         update_res = supabase.table("health_profiles").update(payload).eq("id", profile_id).execute()
         saved_profile = update_res.data[0]
     else:
-        # Insert new
         insert_res = supabase.table("health_profiles").insert(payload).execute()
         saved_profile = insert_res.data[0]
         

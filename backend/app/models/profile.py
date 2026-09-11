@@ -8,7 +8,7 @@ class HealthProfileBase(BaseModel):
     height_cm: float = Field(..., gt=0, description="Height in centimeters")
     weight_kg: float = Field(..., gt=0, description="Weight in kilograms")
     activity_level: str = Field(
-        ..., 
+        default="moderately_active",
         description="sedentary, lightly_active, moderately_active, very_active, extra_active"
     )
     dietary_preference: str = Field(
@@ -18,6 +18,10 @@ class HealthProfileBase(BaseModel):
     health_goals: List[str] = Field(default=[], description="List of health goals")
     allergies_intolerances: List[str] = Field(default=[], description="List of allergies")
     medical_conditions: List[str] = Field(default=[], description="List of medical conditions")
+    health_goal: Optional[str] = Field(default="Improve Nutrition", description="Primary Health Goal")
+    target_value: Optional[str] = Field(default="Improve daily nutrition", description="Target Value or Description")
+    target_unit: Optional[str] = Field(default="", description="Target Unit (e.g. kg, g)")
+    target_period: Optional[str] = Field(default="This Month", description="Target Period")
 
 class HealthProfileCreate(HealthProfileBase):
     pass
@@ -32,14 +36,18 @@ class HealthProfileUpdate(BaseModel):
     health_goals: Optional[List[str]] = None
     allergies_intolerances: Optional[List[str]] = None
     medical_conditions: Optional[List[str]] = None
+    health_goal: Optional[str] = None
+    target_value: Optional[str] = None
+    target_unit: Optional[str] = None
+    target_period: Optional[str] = None
 
 class HealthProfileResponse(HealthProfileBase):
     id: str
     user_id: str
     bmr: Optional[float] = None
     tdee: Optional[float] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

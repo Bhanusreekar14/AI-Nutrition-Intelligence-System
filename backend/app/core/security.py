@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+import jwt
 from app.core.config import settings
 
 security = HTTPBearer()
@@ -34,10 +34,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             "email": payload.get("email"),
             "role": payload.get("role", "authenticated")
         }
-    except JWTError:
+    except jwt.PyJWTError:
         # Fallback for development if secret is not set yet (unverified payload parsing for quick testing)
         try:
-            unverified_payload = jwt.get_unverified_claims(token)
+            unverified_payload = jwt.decode(token, options={"verify_signature": False, "verify_aud": False})
             user_id = unverified_payload.get("sub")
             if user_id:
                 return {

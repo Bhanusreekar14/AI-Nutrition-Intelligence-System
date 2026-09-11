@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase';
-import { Activity, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Heart, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { signIn } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -15,16 +16,13 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const res = await signIn(email.trim(), password);
 
-    if (error) {
-      setError(error.message);
+    if (res?.error) {
+      setError(res.error);
       setLoading(false);
     } else {
-      navigate('/diary');
+      navigate('/');
     }
   };
 
@@ -34,9 +32,10 @@ export const LoginPage: React.FC = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '1.5rem'
+      padding: '1.5rem',
+      background: 'var(--bg-page)'
     }}>
-      <div className="glass-card animate-fade-in" style={{
+      <div className="app-card" style={{
         width: '100%',
         maxWidth: '420px',
         padding: '2.5rem'
@@ -45,15 +44,15 @@ export const LoginPage: React.FC = () => {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
             display: 'inline-flex',
-            background: 'var(--primary-gradient)',
+            background: 'var(--bg-mint)',
             padding: '0.75rem',
-            borderRadius: '14px',
-            color: '#fff',
+            borderRadius: '12px',
+            color: 'var(--primary-emerald)',
             marginBottom: '1rem'
           }}>
-            <Activity size={32} />
+            <Heart size={32} />
           </div>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginBottom: '0.4rem' }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
             Welcome Back
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
@@ -62,20 +61,11 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {error && (
-          <div style={{
-            background: 'rgba(244, 63, 94, 0.15)',
-            border: '1px solid rgba(244, 63, 94, 0.3)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.75rem 1rem',
-            marginBottom: '1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            color: '#fda4af',
-            fontSize: '0.875rem'
-          }}>
-            <AlertCircle size={18} />
-            <span>{error}</span>
+          <div className="alert-error" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+              <AlertCircle size={18} /> Login Error
+            </div>
+            <span style={{ fontSize: '0.85rem' }}>{error}</span>
           </div>
         )}
 
@@ -112,7 +102,7 @@ export const LoginPage: React.FC = () => {
             type="submit"
             className="btn-primary"
             disabled={loading}
-            style={{ width: '100%', marginTop: '0.5rem' }}
+            style={{ width: '100%', marginTop: '0.75rem' }}
           >
             {loading ? 'Authenticating...' : (
               <>Sign In <ArrowRight size={18} /></>

@@ -1,34 +1,34 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase';
-import { Activity, Mail, Lock, User, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Heart, Mail, Lock, User, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const { signUp } = useAuth();
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
 
-    if (error) {
-      setError(error.message);
+    setLoading(true);
+
+    const res = await signUp(fullName, email, password);
+
+    if (res?.error) {
+      setError(res.error);
       setLoading(false);
     } else {
       setSuccess(true);
@@ -45,9 +45,10 @@ export const RegisterPage: React.FC = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '1.5rem'
+      padding: '1.5rem',
+      background: 'var(--bg-page)'
     }}>
-      <div className="glass-card animate-fade-in" style={{
+      <div className="app-card" style={{
         width: '100%',
         maxWidth: '440px',
         padding: '2.5rem'
@@ -56,53 +57,31 @@ export const RegisterPage: React.FC = () => {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
             display: 'inline-flex',
-            background: 'var(--primary-gradient)',
+            background: 'var(--bg-mint)',
             padding: '0.75rem',
-            borderRadius: '14px',
-            color: '#fff',
+            borderRadius: '12px',
+            color: 'var(--primary-emerald)',
             marginBottom: '1rem'
           }}>
-            <Activity size={32} />
+            <Heart size={32} />
           </div>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', marginBottom: '0.4rem' }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
             Create Account
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            Join NutriIntelligence & set up your profile
+            Join NutriHealth & set up your profile
           </p>
         </div>
 
         {error && (
-          <div style={{
-            background: 'rgba(244, 63, 94, 0.15)',
-            border: '1px solid rgba(244, 63, 94, 0.3)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.75rem 1rem',
-            marginBottom: '1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            color: '#fda4af',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-error">
             <AlertCircle size={18} />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.75rem 1rem',
-            marginBottom: '1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            color: '#6ee7b7',
-            fontSize: '0.875rem'
-          }}>
+          <div className="alert-success">
             <CheckCircle size={18} />
             <span>Account created successfully! Redirecting...</span>
           </div>
@@ -152,11 +131,26 @@ export const RegisterPage: React.FC = () => {
             />
           </div>
 
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Lock size={14} /> Confirm Password
+            </label>
+            <input
+              type="password"
+              className="input-field"
+              placeholder="Re-enter password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+          </div>
+
           <button
             type="submit"
             className="btn-primary"
             disabled={loading || success}
-            style={{ width: '100%', marginTop: '0.5rem' }}
+            style={{ width: '100%', marginTop: '0.75rem' }}
           >
             {loading ? 'Registering...' : (
               <>Register <UserPlus size={18} /></>

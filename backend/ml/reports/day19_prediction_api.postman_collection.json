@@ -1,0 +1,107 @@
+{
+  "info": {
+    "_postman_id": "a9b8c7d6-e5f4-4a3b-8c2d-1e0f9a8b7c6d",
+    "name": "AI Nutrition System - Deficiency Prediction API",
+    "description": "Postman Collection for Day 19 API Testing & Integration Preparation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Predict Deficiency Risk - Valid Payload",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"age\": 35.0,\n  \"bmi\": 22.5,\n  \"vitamin_a_percent_rda\": 85.0,\n  \"vitamin_c_percent_rda\": 90.0,\n  \"vitamin_d_percent_rda\": 40.0,\n  \"vitamin_e_percent_rda\": 75.0,\n  \"vitamin_b12_percent_rda\": 60.0,\n  \"folate_percent_rda\": 80.0,\n  \"calcium_percent_rda\": 70.0,\n  \"iron_percent_rda\": 50.0,\n  \"hemoglobin_g_dl\": 11.5,\n  \"serum_vitamin_d_ng_ml\": 18.0,\n  \"serum_vitamin_b12_pg_ml\": 250.0,\n  \"serum_folate_ng_ml\": 8.0,\n  \"symptoms_count\": 2,\n  \"has_night_blindness\": false,\n  \"has_fatigue\": true,\n  \"has_bleeding_gums\": false,\n  \"has_bone_pain\": true,\n  \"has_muscle_weakness\": false,\n  \"has_numbness_tingling\": false,\n  \"has_memory_problems\": false,\n  \"has_pale_skin\": false,\n  \"gender\": \"Female\",\n  \"smoking_status\": \"Never\",\n  \"alcohol_consumption\": \"Moderate\",\n  \"exercise_level\": \"Moderate\",\n  \"diet_type\": \"Vegetarian\",\n  \"sun_exposure\": \"Low\",\n  \"income_level\": \"Middle\",\n  \"latitude_region\": \"Mid\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/predict",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "predict"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Predict Deficiency Risk - Invalid Payload (Validation Error)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"age\": -5.0,\n  \"bmi\": 22.5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/predict",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "predict"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "auth_token",
+      "value": "YOUR_SUPABASE_JWT_ACCESS_TOKEN"
+    }
+  ]
+}

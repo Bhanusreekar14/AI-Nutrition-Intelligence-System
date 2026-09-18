@@ -52,6 +52,12 @@ try:
 except Exception as e:
     raise RuntimeError(f"Failed to load food dataset CSV: {e}")
 
+from app.services.deficiency_mapping import (
+    get_deficiency_mapping,
+    get_all_target_nutrients,
+    DEFICIENCY_MAPPING_REGISTRY,
+)
+
 # Mandatory Medical Disclaimer
 MEDICAL_DISCLAIMER = (
     "These food suggestions are based on available nutritional data and rule-based ranking for educational purposes. "
@@ -59,44 +65,19 @@ MEDICAL_DISCLAIMER = (
     "Consult a qualified healthcare professional or registered dietitian for medical nutrition advice."
 )
 
-# Target Nutrient Mappings per Class
+# Backwards-compatible exports referencing the mapping registry
 TARGET_NUTRIENTS_MAP: Dict[str, List[str]] = {
-    "Anemia": ["iron_mg", "vitamin_c_mg", "protein_g"],
-    "Scurvy": ["vitamin_c_mg", "fiber_g"],
-    "Rickets_Osteomalacia": ["calcium_mg", "protein_g"],
-    "Night_Blindness": ["vitamin_a_rule_signal", "health_score"],
-    "Healthy": ["health_score", "fiber_g", "protein_g"],
+    cls_name: get_all_target_nutrients(cls_name)
+    for cls_name in DEFICIENCY_MAPPING_REGISTRY.keys()
 }
 
-# Educational Advice Messages per Class
 DIETARY_ADVICE_MAP: Dict[str, List[str]] = {
-    "Anemia": [
-        "Include non-heme iron sources (like spinach, legumes, and fortified grains) paired with Vitamin C to enhance absorption.",
-        "Avoid consuming coffee or tea at the exact same time as iron-rich meals, as tannins can inhibit iron uptake."
-    ],
-    "Scurvy": [
-        "Incorporate fresh citrus fruits, bell peppers, strawberries, and broccoli into daily meals to boost natural Vitamin C intake.",
-        "Raw or lightly steamed vegetables retain significantly higher Vitamin C levels compared to prolonged boiling."
-    ],
-    "Rickets_Osteomalacia": [
-        "Choose calcium-dense foods such as dairy products, fortified plant milks, tofu, and dark leafy greens.",
-        "Ensure adequate safe sun exposure or dietary sources to support bone health and calcium uptake."
-    ],
-    "Night_Blindness": [
-        "Focus on orange and dark leafy green vegetables (such as carrots, sweet potatoes, spinach, and squash) rich in provitamin A carotenoids.",
-        "Consuming carotenoid-rich vegetables with a small amount of healthy fats (like olive oil) enhances Vitamin A bioavailability."
-    ],
-    "Healthy": [
-        "Maintain a balanced diet rich in dietary fiber, high-quality proteins, and diverse whole foods.",
-        "Limit excessive sodium, added sugars, and saturated fats to support long-term metabolic and cardiovascular health."
-    ]
+    cls_name: m.dietary_advice
+    for cls_name, m in DEFICIENCY_MAPPING_REGISTRY.items()
 }
 
-# Vitamin A Category / Ingredient Keywords for Night_Blindness signal matching
-VITAMIN_A_KEYWORDS = [
-    "carrot", "spinach", "kale", "sweet potato", "squash", "pumpkin",
-    "liver", "cantaloupe", "mango", "papaya", "apricot", "collard", "turnip green"
-]
+VITAMIN_A_KEYWORDS = DEFICIENCY_MAPPING_REGISTRY["Night_Blindness"].signal_keywords
+
 
 # Allergen Keywords mapping
 ALLERGEN_KEYWORDS: Dict[str, List[str]] = {

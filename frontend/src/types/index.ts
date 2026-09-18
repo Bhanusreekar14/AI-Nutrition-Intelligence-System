@@ -192,3 +192,44 @@ export interface DeficiencyPredictionResponse {
   medical_disclaimer: string;
 }
 
+export interface RecommendedFood {
+  fdc_id?: number | null;
+  food_name: string;
+  food_category?: string | null;
+  serving_size?: number | null;
+  serving_unit?: string | null;
+  calories?: number | null;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+  fiber_g?: number | null;
+  iron_mg?: number | null;
+  vitamin_c_mg?: number | null;
+  calcium_mg?: number | null;
+  health_score?: number | null;
+  ranking_score: number;
+  recommendation_reason: string;
+}
+
+export interface DietRecommendationRequest {
+  predicted_class?: string;
+  deficiency_class?: string;
+  risk_level?: string;
+  risk_score: number;
+  dietary_preference?: string;
+  allergies_intolerances?: string[] | string;
+  allergies?: string[];
+  limit?: number;
+}
+
+export interface DietRecommendationResponse {
+  predicted_class: string;
+  risk_level: string;
+  risk_score: number;
+  targeted_nutrients: string[];
+  recommended_foods: RecommendedFood[];
+  dietary_advice: string[];
+  medical_disclaimer: string;
+}
+
+

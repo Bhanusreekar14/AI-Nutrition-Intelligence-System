@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Navbar } from '../components/Navbar';
-import { predictDeficiencyRisk } from '../services/api';
+import { predictDeficiencyRisk, getDietRecommendations } from '../services/api';
 import { 
   DeficiencyPredictionRequest, 
-  DeficiencyPredictionResponse 
+  DeficiencyPredictionResponse,
+  DietRecommendationResponse
 } from '../types';
 import { 
   Sparkles, 
@@ -14,7 +15,9 @@ import {
   ShieldAlert, 
   Activity, 
   Zap,
-  Info
+  Info,
+  Utensils,
+  RotateCw
 } from 'lucide-react';
 
 const INITIAL_FORM_STATE: DeficiencyPredictionRequest = {
@@ -143,6 +146,12 @@ export const PredictionPage: React.FC = () => {
   const [result, setResult] = useState<DeficiencyPredictionResponse | null>(null);
   const [activeTab, setActiveTab] = useState<'demographics' | 'nutrients' | 'biomarkers' | 'symptoms'>('demographics');
 
+  // Personalized Diet Recommendation States
+  const [recLoading, setRecLoading] = useState<boolean>(false);
+  const [recError, setRecError] = useState<string | null>(null);
+  const [recResult, setRecResult] = useState<DietRecommendationResponse | null>(null);
+  const [allergiesInput, setAllergiesInput] = useState<string>('');
+
   const handleInputChange = (field: keyof DeficiencyPredictionRequest, value: any) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
@@ -161,18 +170,48 @@ export const PredictionPage: React.FC = () => {
     });
   };
 
+  const fetchRecommendations = async (predictedClass: string, riskScore: number, riskLevel: string) => {
+    setRecLoading(true);
+    setRecError(null);
+    try {
+      const parsedAllergies = allergiesInput
+        ? allergiesInput.split(',').map(a => a.trim()).filter(Boolean)
+        : [];
+      const rec = await getDietRecommendations({
+        predicted_class: predictedClass,
+        risk_score: riskScore,
+        risk_level: riskLevel,
+        dietary_preference: formData.diet_type || 'omnivore',
+        allergies_intolerances: parsedAllergies,
+        limit: 10
+      });
+      setRecResult(rec);
+    } catch (err: any) {
+      console.error('Diet recommendation error:', err);
+      setRecError('Unable to load food recommendations. Please try again.');
+    } finally {
+      setRecLoading(false);
+    }
+  };
+
   const handleApplyPreset = (presetData: DeficiencyPredictionRequest) => {
     setFormData(presetData);
     setResult(null);
+    setRecResult(null);
+    setRecError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setRecResult(null);
+    setRecError(null);
     try {
       const res = await predictDeficiencyRisk(formData);
       setResult(res);
+      // Automatically trigger recommendations using predicted deficiency result
+      await fetchRecommendations(res.predicted_class, res.risk_score, res.risk_level);
     } catch (err: any) {
       console.error('Prediction error:', err);
       setError(err?.response?.data?.detail || err?.message || 'Failed to generate prediction. Please check backend status.');
@@ -180,6 +219,13 @@ export const PredictionPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const handleRetryRecommendations = () => {
+    if (result) {
+      fetchRecommendations(result.predicted_class, result.risk_score, result.risk_level);
+    }
+  };
+
 
   const getRiskBadgeColor = (level: string) => {
     switch (level.toLowerCase()) {
@@ -355,6 +401,18 @@ export const PredictionPage: React.FC = () => {
                       </select>
                     </div>
                   </div>
+
+                  <div>
+                    <label className="form-label">Allergies / Intolerances (Optional)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. dairy, peanuts, seafood"
+                      value={allergiesInput}
+                      onChange={(e) => setAllergiesInput(e.target.value)}
+                    />
+                  </div>
+
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
@@ -738,6 +796,198 @@ export const PredictionPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Personalized Food Recommendations Card */}
+              <div className="app-card" style={{ padding: '1.5rem' }}>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Utensils size={20} color="var(--primary-emerald)" /> Personalized Food Recommendations
+                    </h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      Targeted nutrient-dense food plan for {result.predicted_class} risk ({result.risk_level}) and {formData.diet_type || 'omnivore'} diet.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRetryRecommendations}
+                    disabled={recLoading}
+                    className="btn-secondary"
+                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <RotateCw size={14} className={recLoading ? 'spin-icon' : ''} />
+                    {recLoading ? 'Refreshing...' : 'Retry Recommendations'}
+                  </button>
+                </div>
+
+                {/* Loading state */}
+                {recLoading && (
+                  <div style={{ padding: '2rem 1rem', textAlign: 'center', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                    <Loader2 size={24} className="spin-icon" style={{ color: 'var(--primary-emerald)', margin: '0 auto 0.75rem auto' }} />
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                      Generating personalized recommendations...
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                      Filtering USDA nutritional dataset based on dietary preferences, allergen exclusions, and target nutrients.
+                    </div>
+                  </div>
+                )}
+
+                {/* Non-blocking Error state */}
+                {!recLoading && recError && (
+                  <div style={{ padding: '1rem', borderRadius: 'var(--radius-md)', background: '#fff5f5', border: '1px solid #fed7d7', color: '#9b2c2c', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <AlertTriangle size={18} color="#e53e3e" />
+                      <span>{recError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRetryRecommendations}
+                      style={{ background: '#e53e3e', color: '#ffffff', border: 'none', padding: '0.35rem 0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Retry Recommendations
+                    </button>
+                  </div>
+                )}
+
+                {/* Success state */}
+                {!recLoading && !recError && recResult && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    
+                    {/* Targeted Nutrients Badge list */}
+                    {recResult.targeted_nutrients && recResult.targeted_nutrients.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', background: 'var(--bg-mint)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-mint)' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-emerald)' }}>TARGETED NUTRIENTS:</span>
+                        {recResult.targeted_nutrients.map((n, idx) => (
+                          <span key={idx} className="badge badge-mint" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                            {n}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Empty State */}
+                    {recResult.recommended_foods.length === 0 ? (
+                      <div style={{ padding: '2rem 1rem', textAlign: 'center', background: '#f8fafc', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        No matching food recommendations found for the selected dietary preferences and allergy constraints.
+                      </div>
+                    ) : (
+                      /* Recommended Foods Cards List */
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                        {recResult.recommended_foods.map((food, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              background: '#ffffff',
+                              border: '1px solid var(--border-subtle)',
+                              borderRadius: 'var(--radius-md)',
+                              padding: '1rem',
+                              boxShadow: 'var(--shadow-sm)',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                  <h5 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                                    {food.food_name}
+                                  </h5>
+                                  {food.food_category && (
+                                    <span className="badge badge-blue" style={{ fontSize: '0.72rem' }}>
+                                      {food.food_category}
+                                    </span>
+                                  )}
+                                </div>
+                                {(food.serving_size || food.serving_unit) && (
+                                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                    Serving: {food.serving_size || 100} {food.serving_unit || 'g'}
+                                  </span>
+                                )}
+                              </div>
+
+                              {food.health_score !== null && food.health_score !== undefined && (
+                                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                  <span 
+                                    style={{ 
+                                      fontSize: '0.75rem', 
+                                      fontWeight: 700, 
+                                      background: '#f0fdf4', 
+                                      color: 'var(--primary-emerald)', 
+                                      border: '1px solid var(--border-mint)',
+                                      padding: '0.2rem 0.5rem', 
+                                      borderRadius: 'var(--radius-sm)' 
+                                    }}
+                                  >
+                                    Health Score: {food.health_score}/100
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Recommendation Reason */}
+                            {food.recommendation_reason && (
+                              <p style={{ fontSize: '0.82rem', color: 'var(--text-main)', background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--primary-emerald)', marginBottom: '0.65rem' }}>
+                                <strong>Why recommended:</strong> {food.recommendation_reason}
+                              </p>
+                            )}
+
+                            {/* Key Nutrients Grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '0.5rem', fontSize: '0.78rem' }}>
+                              <div style={{ background: '#f1f5f9', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>CALORIES</span>
+                                <strong style={{ color: 'var(--text-main)' }}>{food.calories ?? 0} kcal</strong>
+                              </div>
+                              <div style={{ background: '#f1f5f9', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>PROTEIN</span>
+                                <strong style={{ color: 'var(--text-main)' }}>{food.protein_g ?? 0} g</strong>
+                              </div>
+                              <div style={{ background: '#f1f5f9', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>IRON</span>
+                                <strong style={{ color: 'var(--text-main)' }}>{food.iron_mg ?? 0} mg</strong>
+                              </div>
+                              <div style={{ background: '#f1f5f9', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>VITAMIN C</span>
+                                <strong style={{ color: 'var(--text-main)' }}>{food.vitamin_c_mg ?? 0} mg</strong>
+                              </div>
+                              <div style={{ background: '#f1f5f9', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>CALCIUM</span>
+                                <strong style={{ color: 'var(--text-main)' }}>{food.calcium_mg ?? 0} mg</strong>
+                              </div>
+                              <div style={{ background: '#f1f5f9', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem' }}>FIBER</span>
+                                <strong style={{ color: 'var(--text-main)' }}>{food.fiber_g ?? 0} g</strong>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Educational Dietary Guidance / Advice */}
+                    {recResult.dietary_advice && recResult.dietary_advice.length > 0 && (
+                      <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#0369a1' }}>
+                        <strong style={{ display: 'block', marginBottom: '0.25rem', color: '#0c4a6e' }}>Dietary Guidance:</strong>
+                        <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+                          {recResult.dietary_advice.map((advice, idx) => (
+                            <li key={idx} style={{ marginBottom: '0.15rem' }}>{advice}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Recommendation Medical Disclaimer */}
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', color: '#1e40af', fontSize: '0.78rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                      <Info size={16} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                      <div>
+                        <strong style={{ display: 'block', marginBottom: '0.1rem' }}>Recommendation Disclaimer:</strong>
+                        {recResult.medical_disclaimer}
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+              </div>
+
               {/* Medical Disclaimer Banner */}
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)', padding: '1rem', color: '#1e40af', fontSize: '0.82rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                 <Info size={20} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
@@ -746,6 +996,7 @@ export const PredictionPage: React.FC = () => {
                   <div>{result.medical_disclaimer}</div>
                 </div>
               </div>
+
 
             </div>
           )}

@@ -49,3 +49,37 @@ class DailyMealPlan(BaseModel):
     total_fiber_g: float = Field(default=0.0, description="Sum of dietary fiber for the day in grams")
     deficiency_class: str = Field(..., description="Target deficiency class profile")
     medical_disclaimer: str = Field(..., description="Mandatory medical educational disclaimer")
+
+class WeeklyMealPlanConstraints(BaseModel):
+    max_weekly_food_repetition: int = Field(
+        default=2,
+        ge=1,
+        description="Maximum allowed occurrences of a food item across the entire 7-day plan"
+    )
+    max_consecutive_day_repetition: int = Field(
+        default=1,
+        ge=1,
+        description="Maximum allowed occurrences of the same food item on consecutive days"
+    )
+    max_weekly_category_repetition: int = Field(
+        default=6,
+        ge=1,
+        description="Maximum allowed occurrences of the same food category across the 7-day plan"
+    )
+    daily_constraints: Optional[MealSelectionConstraints] = Field(
+        default=None,
+        description="Optional override constraints for single-day meal selection"
+    )
+
+class WeeklyMealPlan(BaseModel):
+    plan_id: Optional[str] = Field(default=None, description="Generated unique plan identifier string")
+    days: List[DailyMealPlan] = Field(..., description="List of 7 DailyMealPlan objects")
+    total_days: int = Field(default=7, description="Total days in the generated plan")
+    total_weekly_calories: float = Field(default=0.0, description="Sum of calories across all 7 days in kcal")
+    total_weekly_protein_g: float = Field(default=0.0, description="Sum of protein across all 7 days in grams")
+    total_weekly_carbs_g: float = Field(default=0.0, description="Sum of carbs across all 7 days in grams")
+    total_weekly_fat_g: float = Field(default=0.0, description="Sum of fat across all 7 days in grams")
+    total_weekly_fiber_g: float = Field(default=0.0, description="Sum of dietary fiber across all 7 days in grams")
+    deficiency_class: str = Field(..., description="Target deficiency class profile")
+    medical_disclaimer: str = Field(..., description="Mandatory medical educational disclaimer")
+

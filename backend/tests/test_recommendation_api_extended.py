@@ -5,7 +5,7 @@ from app.main import app
 client = TestClient(app)
 
 AUTH_HEADER = {
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJyb2xlIjoiYXV0aGVudGljYXRlZCJ9.dummy_signature"
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJyb2xlIjoiYXV0aGVudGljYXRlZCJ9.Dx9cvnLGMzsbCfrQ3jZzepEjsepkrsOiZVPlCUpSIuQ"
 }
 
 BASE_PAYLOAD = {
@@ -211,3 +211,22 @@ def test_ext_22_health_regression():
     response = client.get("/api/v1/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
+
+# 23. Prohibited foods via API
+def test_ext_23_prohibited_foods_via_api():
+    payload = BASE_PAYLOAD.copy()
+    payload["prohibited_foods"] = ["spinach", "liver"]
+    response = client.post("/api/v1/recommendations", json=payload, headers=AUTH_HEADER)
+    assert response.status_code == 200
+    for food in response.json()["recommended_foods"]:
+        name = food["food_name"].lower()
+        assert "spinach" not in name
+        assert "liver" not in name
+
+# 24. Preferred foods via API
+def test_ext_24_preferred_foods_via_api():
+    payload = BASE_PAYLOAD.copy()
+    payload["preferred_foods"] = "beans, lentils"
+    response = client.post("/api/v1/recommendations", json=payload, headers=AUTH_HEADER)
+    assert response.status_code == 200
+    assert len(response.json()["recommended_foods"]) > 0

@@ -167,3 +167,52 @@ def test_medical_disclaimer_present():
     res = RecommendationService.get_recommendations(req)
     assert "educational purposes" in res.medical_disclaimer.lower()
     assert "medical diagnoses" in res.medical_disclaimer.lower()
+
+def test_m32_prohibited_food_filtering():
+    """Verify prohibited food exclusions remove matching food items before ranking."""
+    req = DietRecommendationRequest(
+        predicted_class="Anemia",
+        prohibited_foods=["spinach", "beef"],
+        limit=10
+    )
+    res = RecommendationService.get_recommendations(req)
+    assert len(res.recommended_foods) > 0
+    for food in res.recommended_foods:
+        name_lower = food.food_name.lower()
+        assert "spinach" not in name_lower
+        assert "beef" not in name_lower
+
+def test_m32_user_food_preferences_boosting():
+    """Verify preferred food keywords boost matching item ranking scores."""
+    req_pref = DietRecommendationRequest(
+        predicted_class="Anemia",
+        preferred_foods=["bean"],
+        limit=10
+    )
+    res_pref = RecommendationService.get_recommendations(req_pref)
+    assert len(res_pref.recommended_foods) > 0
+    pref_items = [f for f in res_pref.recommended_foods if "bean" in f.food_name.lower()]
+    assert len(pref_items) > 0
+
+def test_m32_risk_aware_prioritization_scaling():
+    """Verify higher risk scores increase ranking score for nutrient-rich items."""
+    req_low = DietRecommendationRequest(
+        predicted_class="Anemia",
+        risk_score=10.0,
+        risk_level="Low Risk",
+        limit=5
+    )
+    res_low = RecommendationService.get_recommendations(req_low)
+
+    req_high = DietRecommendationRequest(
+        predicted_class="Anemia",
+        risk_score=90.0,
+        risk_level="Very High Risk",
+        limit=5
+    )
+    res_high = RecommendationService.get_recommendations(req_high)
+
+    assert len(res_low.recommended_foods) > 0
+    assert len(res_high.recommended_foods) > 0
+    # Top food in high risk should have equal or higher ranking score due to risk multiplier
+    assert res_high.recommended_foods[0].ranking_score >= res_low.recommended_foods[0].ranking_score

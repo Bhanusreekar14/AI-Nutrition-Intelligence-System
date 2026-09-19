@@ -34,6 +34,14 @@ class DietRecommendationRequest(BaseModel):
         default=[],
         description="List or comma-separated string of user allergies/intolerances"
     )
+    prohibited_foods: Union[List[str], str] = Field(
+        default=[],
+        description="List or comma-separated string of prohibited/excluded food names or keywords"
+    )
+    preferred_foods: Union[List[str], str] = Field(
+        default=[],
+        description="List or comma-separated string of preferred food keywords to boost ranking"
+    )
     limit: int = Field(default=10, ge=1, le=50, description="Maximum number of recommended food items")
 
 class DietRecommendationResponse(BaseModel):

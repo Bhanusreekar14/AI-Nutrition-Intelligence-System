@@ -83,7 +83,7 @@ VITAMIN_A_KEYWORDS = DEFICIENCY_MAPPING_REGISTRY["Night_Blindness"].signal_keywo
 ALLERGEN_KEYWORDS: Dict[str, List[str]] = {
     "gluten": ["wheat", "barley", "rye", "gluten", "flour", "semolina", "spelt", "kamut"],
     "dairy": ["milk", "cheese", "butter", "cream", "yogurt", "whey", "casein", "lactose", "ghee", "custard"],
-    "nuts": ["peanut", "almond", "walnut", "cashew", "pecan", "hazelnut", "macadamia", "pistachio", "tree nut"],
+    "nuts": ["nut", "nuts", "peanut", "almond", "walnut", "cashew", "pecan", "hazelnut", "macadamia", "pistachio", "tree nut"],
     "soy": ["soy", "soybean", "tofu", "edamame", "tempeh", "miso", "lecithin"],
     "eggs": ["egg", "albumin", "mayonnaise", "meringue"],
     "fish": ["fish", "salmon", "tuna", "cod", "trout", "anchovy", "sardine", "shrimp", "crab", "lobster", "seafood"]
@@ -146,10 +146,16 @@ def is_allergen_free(row: pd.Series, user_allergies: Set[str]) -> bool:
     for allergy in user_allergies:
         keywords = ALLERGEN_KEYWORDS.get(allergy, [allergy])
         for kw in keywords:
-            pattern = rf"\b{re.escape(kw)}"
+            pattern = rf"\b{re.escape(kw)}s?\b"
             if re.search(pattern, text_to_check):
+                # Exception check for safe non-nut items like 'coconut' or 'donut'
+                if kw in ("nut", "nuts") and any(ex in text_to_check for ex in ["coconut", "donut"]):
+                    clean_text = re.sub(r"\b(coconuts?|donuts?)\b", "", text_to_check)
+                    if not re.search(pattern, clean_text):
+                        continue
                 return False
     return True
+
 
 
 def is_diet_compliant(row: pd.Series, dietary_preference: str) -> bool:
@@ -162,13 +168,16 @@ def is_diet_compliant(row: pd.Series, dietary_preference: str) -> bool:
 
     if pref == "vegetarian":
         for kw in MEAT_FISH_KEYWORDS:
-            if re.search(rf"\b{re.escape(kw)}\b", text_to_check):
+            if re.search(rf"\b{re.escape(kw)}s?\b", text_to_check):
                 return False
 
     elif pref == "vegan":
         for kw in ANIMAL_DERIVED_KEYWORDS:
-            if re.search(rf"\b{re.escape(kw)}\b", text_to_check):
+            if re.search(rf"\b{re.escape(kw)}s?\b", text_to_check):
+                if kw == "butter" and any(p in text_to_check for p in ["almond", "peanut", "apple", "cocoa", "fluffbutter", "seed", "nut"]):
+                    continue
                 return False
+
 
     elif pref == "keto":
         carbs = float(row.get("carbs_g", 0.0))
@@ -179,7 +188,7 @@ def is_diet_compliant(row: pd.Series, dietary_preference: str) -> bool:
     elif pref == "paleo":
         paleo_exclude = ["wheat", "rice", "corn", "oats", "bean", "peanut", "soy", "milk", "cheese", "sugar", "syrup"]
         for kw in paleo_exclude:
-            if re.search(rf"\b{re.escape(kw)}\b", text_to_check):
+            if re.search(rf"\b{re.escape(kw)}s?\b", text_to_check):
                 return False
 
     return True
@@ -198,8 +207,7 @@ def is_prohibited_food(row: pd.Series, prohibited_terms: Set[str]) -> bool:
     for term in prohibited_terms:
         if not term:
             continue
-        # Check both word boundary and direct substring search for conservative exclusion
-        pattern = rf"\b{re.escape(term)}\b"
+        pattern = rf"\b{re.escape(term)}"
         if re.search(pattern, text_to_check) or term in text_to_check:
             return True
     return False
@@ -241,13 +249,8 @@ class RecommendationService:
         # 4. Centralized Prohibited Food Exclusions (BEFORE final ranking)
         if prohibited_terms:
             prohibited_mask = df.apply(lambda r: not is_prohibited_food(r, prohibited_terms), axis=1)
-            df_filtered = df[prohibited_mask].copy()
-            if not df_filtered.empty:
-                df = df_filtered
+            df = df[prohibited_mask].copy()
 
-        if df.empty:
-            # Safe fallback if strict filters produce empty set
-            df = _FOOD_DF.copy()
 
         # 5. Risk-Aware & Deficiency-Specific Deterministic Score Calculation
         # NOTE: ranking_score is an internal deterministic recommendation score (0-100), NOT a clinical or medical treatment score.

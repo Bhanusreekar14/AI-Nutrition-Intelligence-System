@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 from pydantic import BaseModel, Field
 from app.models.recommendation import RecommendedFood
 
@@ -83,3 +83,25 @@ class WeeklyMealPlan(BaseModel):
     deficiency_class: str = Field(..., description="Target deficiency class profile")
     medical_disclaimer: str = Field(..., description="Mandatory medical educational disclaimer")
 
+class MealReplacementRequest(BaseModel):
+    weekly_plan: WeeklyMealPlan = Field(..., description="Existing 7-day meal plan")
+    day: int = Field(..., ge=1, le=7, description="Day number (1 to 7) containing the item to replace")
+    meal_type: MealType = Field(..., description="Meal slot (breakfast, lunch, snack, dinner)")
+    target_food_name: str = Field(..., description="Name of the food item to be replaced")
+    dietary_preference: str = Field(default="omnivore", description="User dietary preference")
+    allergies_intolerances: Union[List[str], str] = Field(default=[], description="User allergies/intolerances")
+    prohibited_foods: Union[List[str], str] = Field(default=[], description="Excluded food keywords")
+    preferred_foods: Union[List[str], str] = Field(default=[], description="Preferred food keywords")
+    predicted_class: Optional[str] = Field(default=None, description="Deficiency class (defaults to plan's class)")
+    risk_level: str = Field(default="Moderate Risk", description="Risk level string")
+    risk_score: float = Field(default=50.0, ge=0.0, le=100.0, description="Risk score numeric value")
+
+class MealReplacementResponse(BaseModel):
+    original_food: RecommendedFood = Field(..., description="Original food item being replaced")
+    replacement_food: RecommendedFood = Field(..., description="Newly selected replacement food item")
+    replacement_reason: str = Field(..., description="Explanation of why this replacement was selected")
+    is_fallback: bool = Field(default=False, description="Flag indicating if candidate was selected via fallback criteria")
+    updated_meal: MealSelection = Field(..., description="Updated meal slot containing the replaced food")
+    updated_day: DailyMealPlan = Field(..., description="Updated daily meal plan with recalculated totals")
+    updated_weekly_plan: WeeklyMealPlan = Field(..., description="Updated 7-day meal plan with recalculated totals")
+    medical_disclaimer: str = Field(..., description="Mandatory medical educational disclaimer")

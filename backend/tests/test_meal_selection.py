@@ -1,5 +1,7 @@
+import re
 import pytest
 from app.models.recommendation import DietRecommendationRequest
+
 from app.models.meal import (
     MealType,
     MealSelectionConstraints,
@@ -186,7 +188,9 @@ def test_m33_allergy_filtering_respected():
     for meal in plan.meals.values():
         for food in meal.selected_foods:
             name_lower = food.food_name.lower()
-            assert "nut" not in name_lower or "donut" in name_lower or "coconut" in name_lower, f"Nut allergen present in food: {food.food_name}"
+            is_nut_item = bool(re.search(r"\b(nuts?|peanuts?|almonds?|walnuts?|cashews?|pecans?|hazelnuts?|pistachios?|macadamias?)\b", name_lower)) and not any(ex in name_lower for ex in ["coconut", "donut"])
+            assert not is_nut_item, f"Nut allergen present in food: {food.food_name}"
+
 
 
 def test_m33_prohibited_foods_filtering_respected():

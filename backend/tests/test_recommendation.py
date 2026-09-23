@@ -216,3 +216,65 @@ def test_m32_risk_aware_prioritization_scaling():
     assert len(res_high.recommended_foods) > 0
     # Top food in high risk should have equal or higher ranking score due to risk multiplier
     assert res_high.recommended_foods[0].ranking_score >= res_low.recommended_foods[0].ranking_score
+
+
+def test_focused_allergen_word_boundary_rules():
+    """
+    Focused regression tests verifying:
+    a) 'nutritional' does NOT trigger the 'nut' allergen keyword.
+    b) 'banana nut crunch' DOES trigger the nuts allergy.
+    c) 'peanut' DOES trigger the nuts/peanut allergy.
+    d) 'almond' and other common nut names are blocked.
+    e) existing coconut/donut exceptions remain correct.
+    """
+    import pandas as pd
+    from app.services.recommendation_service import is_allergen_free
+
+    user_allergies = {"nuts"}
+
+    # a) 'nutritional' must not trigger 'nut'
+    row_nutritional = pd.Series({
+        "food_name_clean": "100% PLANT-BASED NUTRITIONAL SHAKE, DECADENT CHOCOLATE",
+        "food_category": "Beverages",
+        "ingredients": "Water, Pea Protein, Cocoa"
+    })
+    assert is_allergen_free(row_nutritional, user_allergies) is True, "'nutritional' incorrectly triggered nut allergy"
+
+    # b) 'banana nut crunch' must trigger nuts allergy
+    row_banana_nut = pd.Series({
+        "food_name_clean": "Cereals ready-to-eat, POST GREAT GRAINS Banana Nut Crunch",
+        "food_category": "Cereal",
+        "ingredients": "Wheat, Oats, Walnuts"
+    })
+    assert is_allergen_free(row_banana_nut, user_allergies) is False, "'banana nut crunch' failed to trigger nut allergy"
+
+    # c) 'peanut' must trigger nuts allergy
+    row_peanut = pd.Series({
+        "food_name_clean": "Peanut Butter Spread",
+        "food_category": "Spreads",
+        "ingredients": "Peanuts, Salt"
+    })
+    assert is_allergen_free(row_peanut, user_allergies) is False, "'peanut' failed to trigger nut allergy"
+
+    # d) 'almond' must be blocked
+    row_almond = pd.Series({
+        "food_name_clean": "Amandine Maple Almonds",
+        "food_category": "Nuts",
+        "ingredients": "Almonds, Maple Syrup"
+    })
+    assert is_allergen_free(row_almond, user_allergies) is False, "'almond' failed to trigger nut allergy"
+
+    # e) 'coconut' and 'donut' exceptions
+    row_coconut = pd.Series({
+        "food_name_clean": "Pure Coconut Water",
+        "food_category": "Beverages",
+        "ingredients": "Coconut Water"
+    })
+    assert is_allergen_free(row_coconut, user_allergies) is True, "'coconut' incorrectly triggered nut allergy"
+
+    row_donut = pd.Series({
+        "food_name_clean": "Glazed Donut",
+        "food_category": "Bakery",
+        "ingredients": "Flour, Sugar"
+    })
+    assert is_allergen_free(row_donut, user_allergies) is True, "'donut' incorrectly triggered nut allergy"

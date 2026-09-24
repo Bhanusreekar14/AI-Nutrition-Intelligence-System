@@ -232,4 +232,58 @@ export interface DietRecommendationResponse {
   medical_disclaimer: string;
 }
 
+export interface Recipe {
+  recipe_id: string;
+  fdc_id?: number | null;
+  title: string;
+  category?: string | null;
+  ingredients?: string | null;
+  serving_size?: number | null;
+  serving_unit?: string | null;
+  calories?: number | null;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
+  fiber_g?: number | null;
+  iron_mg?: number | null;
+  vitamin_c_mg?: number | null;
+  calcium_mg?: number | null;
+  sodium_mg?: number | null;
+  sugar_g?: number | null;
+  health_score?: number | null;
+  food_type?: string | null;
+  dietary_tags: string[];
+  targeted_deficiency?: string | null;
+  ranking_score: number;
+  recommendation_reason: string;
+}
 
+export interface RecipeSearchRequest {
+  query?: string;
+  category?: string;
+  dietary_preference?: string;
+  allergies?: string[];
+  allergies_intolerances?: string[] | string;
+  prohibited_foods?: string[] | string;
+  preferred_foods?: string[] | string;
+  limit?: number;
+}
+
+export interface RecipeSearchResponse {
+  recipes: Recipe[];
+  total_count: number;
+  disclaimer: string;
+}
+
+export interface RecipeRecommendationRequest {
+  deficiency_class?: string;
+  predicted_class?: string;
+  risk_level?: string;
+  risk_score?: number;
+  dietary_preference?: string;
+  allergies?: string[];
+  allergies_intolerances?: string[] | string;
+  prohibited_foods?: string[] | string;
+  preferred_foods?: string[] | string;
+  limit?: number;
+}

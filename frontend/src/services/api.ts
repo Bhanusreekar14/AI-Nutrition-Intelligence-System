@@ -12,7 +12,10 @@ import {
   DeficiencyPredictionRequest,
   DeficiencyPredictionResponse,
   DietRecommendationRequest,
-  DietRecommendationResponse
+  DietRecommendationResponse,
+  Recipe,
+  RecipeSearchResponse,
+  RecipeRecommendationRequest
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -149,5 +152,34 @@ export const getDietRecommendations = async (
   payload: DietRecommendationRequest
 ): Promise<DietRecommendationResponse> => {
   const response = await apiClient.post<DietRecommendationResponse>('/recommendations', payload);
+  return response.data;
+};
+
+// Recipe Integration Endpoints
+export const searchRecipes = async (
+  params?: {
+    query?: string;
+    category?: string;
+    dietary_preference?: string;
+    allergies?: string[];
+    allergies_intolerances?: string[];
+    prohibited_foods?: string[];
+    preferred_foods?: string[];
+    limit?: number;
+  }
+): Promise<RecipeSearchResponse> => {
+  const response = await apiClient.get<RecipeSearchResponse>('/recipes/search', { params });
+  return response.data;
+};
+
+export const getRecipeById = async (recipeId: string): Promise<Recipe> => {
+  const response = await apiClient.get<Recipe>(`/recipes/${recipeId}`);
+  return response.data;
+};
+
+export const getRecipeRecommendations = async (
+  payload: RecipeRecommendationRequest
+): Promise<RecipeSearchResponse> => {
+  const response = await apiClient.post<RecipeSearchResponse>('/recipes/recommendations', payload);
   return response.data;
 };

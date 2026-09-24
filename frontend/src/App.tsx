@@ -10,6 +10,7 @@ import { FoodDiaryPage } from './pages/FoodDiaryPage';
 import { SymptomsPage } from './pages/SymptomsPage';
 import { BloodTestPage } from './pages/BloodTestPage';
 import { PredictionPage } from './pages/PredictionPage';
+import { RecipesPage } from './pages/RecipesPage';
 
 export const App: React.FC = () => {
   return (
@@ -66,6 +67,14 @@ export const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <PredictionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes"
+            element={
+              <ProtectedRoute>
+                <RecipesPage />
               </ProtectedRoute>
             }
           />

@@ -8,6 +8,7 @@ import {
   Activity, 
   FileText, 
   Sparkles,
+  Utensils,
   LogOut, 
   Menu, 
   X,
@@ -40,6 +41,7 @@ export const Navbar: React.FC = () => {
     { label: 'Symptoms', path: '/symptoms', icon: <Activity size={18} /> },
     { label: 'Blood Test', path: '/blood-tests', icon: <FileText size={18} /> },
     { label: 'AI Predictor', path: '/predict', icon: <Sparkles size={18} /> },
+    { label: 'Recipes', path: '/recipes', icon: <Utensils size={18} /> },
   ];
 
   return (

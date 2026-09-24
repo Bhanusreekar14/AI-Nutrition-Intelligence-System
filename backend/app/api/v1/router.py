@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import health, profile, diary, symptoms, blood_tests, food_search, predict, recommendations
+from app.api.v1 import health, profile, diary, symptoms, blood_tests, food_search, predict, recommendations, recipes
 
 api_router = APIRouter()
 
@@ -11,5 +11,4 @@ api_router.include_router(blood_tests.router, prefix="/blood-tests", tags=["Bloo
 api_router.include_router(food_search.router, prefix="/food", tags=["Food Search"])
 api_router.include_router(predict.router, tags=["Deficiency Risk Prediction"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["Diet Recommendations"])
-
-
+api_router.include_router(recipes.router, prefix="/recipes", tags=["Recipes"])

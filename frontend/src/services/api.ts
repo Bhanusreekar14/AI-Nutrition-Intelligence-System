@@ -15,7 +15,10 @@ import {
   DietRecommendationResponse,
   Recipe,
   RecipeSearchResponse,
-  RecipeRecommendationRequest
+  RecipeRecommendationRequest,
+  WeeklyMealPlan,
+  MealReplacementRequest,
+  MealReplacementResponse
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -181,5 +184,22 @@ export const getRecipeRecommendations = async (
   payload: RecipeRecommendationRequest
 ): Promise<RecipeSearchResponse> => {
   const response = await apiClient.post<RecipeSearchResponse>('/recipes/recommendations', payload);
+  return response.data;
+};
+
+// Meal Plan Integration Endpoints
+export const generateWeeklyMealPlan = async (
+  recommendationRequest: DietRecommendationRequest
+): Promise<WeeklyMealPlan> => {
+  const response = await apiClient.post<WeeklyMealPlan>('/meal-plans/generate', {
+    recommendation_request: recommendationRequest
+  });
+  return response.data;
+};
+
+export const replaceMealItem = async (
+  payload: MealReplacementRequest
+): Promise<MealReplacementResponse> => {
+  const response = await apiClient.post<MealReplacementResponse>('/meal-plans/replace', payload);
   return response.data;
 };

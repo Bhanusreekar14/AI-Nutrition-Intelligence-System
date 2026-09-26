@@ -116,6 +116,8 @@ export interface BloodTestEntry {
   hemoglobin?: number | string;
   vitamin_d?: number | string;
   vitamin_b12?: number | string;
+  folate?: number | string;
+  serum_folate?: number | string;
   iron?: number | string;
   calcium?: number | string;
   report_file_reference?: string | null;
@@ -146,6 +148,7 @@ export interface DeficiencyPredictionRequest {
   vitamin_b6_percent_rda?: number;
   folate_b9_percent_rda?: number;
   vitamin_b12_percent_rda?: number;
+  folate_percent_rda?: number;
   calcium_percent_rda?: number;
   iron_percent_rda?: number;
   magnesium_percent_rda?: number;
@@ -158,16 +161,19 @@ export interface DeficiencyPredictionRequest {
   serum_folate_ng_ml?: number;
 
   symptoms_count?: number;
+  has_night_blindness?: boolean;
   has_fatigue?: boolean;
+  has_bleeding_gums?: boolean;
+  has_bone_pain?: boolean;
+  has_muscle_weakness?: boolean;
+  has_numbness_tingling?: boolean;
+  has_memory_problems?: boolean;
+  has_pale_skin?: boolean;
   has_weakness?: boolean;
   has_dizziness?: boolean;
   has_hair_loss?: boolean;
   has_brittle_nails?: boolean;
-  has_pale_skin?: boolean;
-  has_bone_pain?: boolean;
   has_muscle_cramps?: boolean;
-  has_numbness_tingling?: boolean;
-  has_night_blindness?: boolean;
   has_mouth_sores?: boolean;
   has_slow_wound_healing?: boolean;
 }
@@ -286,4 +292,62 @@ export interface RecipeRecommendationRequest {
   prohibited_foods?: string[] | string;
   preferred_foods?: string[] | string;
   limit?: number;
+}
+
+export type MealType = 'breakfast' | 'lunch' | 'snack' | 'dinner';
+
+export interface MealSelection {
+  meal_type: MealType;
+  target_count: number;
+  selected_foods: RecommendedFood[];
+}
+
+export interface DailyMealPlan {
+  day: number;
+  meals: Record<MealType, MealSelection>;
+  total_calories: number;
+  total_protein_g: number;
+  total_carbs_g: number;
+  total_fat_g: number;
+  total_fiber_g: number;
+  deficiency_class: string;
+  medical_disclaimer: string;
+}
+
+export interface WeeklyMealPlan {
+  plan_id?: string | null;
+  days: DailyMealPlan[];
+  total_days: number;
+  total_weekly_calories: number;
+  total_weekly_protein_g: number;
+  total_weekly_carbs_g: number;
+  total_weekly_fat_g: number;
+  total_weekly_fiber_g: number;
+  deficiency_class: string;
+  medical_disclaimer: string;
+}
+
+export interface MealReplacementRequest {
+  weekly_plan: WeeklyMealPlan;
+  day: number;
+  meal_type: MealType;
+  target_food_name: string;
+  dietary_preference?: string;
+  allergies_intolerances?: string[] | string;
+  prohibited_foods?: string[] | string;
+  preferred_foods?: string[] | string;
+  predicted_class?: string;
+  risk_level?: string;
+  risk_score?: number;
+}
+
+export interface MealReplacementResponse {
+  original_food: RecommendedFood;
+  replacement_food: RecommendedFood;
+  replacement_reason: string;
+  is_fallback: boolean;
+  updated_meal: MealSelection;
+  updated_day: DailyMealPlan;
+  updated_weekly_plan: WeeklyMealPlan;
+  medical_disclaimer: string;
 }

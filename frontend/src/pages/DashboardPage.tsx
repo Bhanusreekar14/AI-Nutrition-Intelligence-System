@@ -26,6 +26,7 @@ import { NutritionSummaryCards } from '../components/dashboard/NutritionSummaryC
 import { NutritionChart } from '../components/dashboard/NutritionChart';
 import { DeficiencyRiskCard } from '../components/dashboard/DeficiencyRiskCard';
 import { WeeklyMealPlanView } from '../components/dashboard/WeeklyMealPlanView';
+import { LongitudinalProgressTracker } from '../components/dashboard/LongitudinalProgressTracker';
 import {
   UserCheck,
   BookOpen,
@@ -334,6 +335,9 @@ export const DashboardPage: React.FC = () => {
               <NutritionChart data={weeklySummaries} tdeeTarget={profile?.tdee} />
               <DeficiencyRiskCard prediction={prediction} hasEnoughData={hasEnoughPredictionData} />
             </div>
+
+            {/* 3. Longitudinal Deficiency Risk & Progress Tracker (4/8/12 Weeks) */}
+            <LongitudinalProgressTracker />
 
             {/* 3. Today's Logged Food Diary Summary Section */}
             <div className="app-card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>

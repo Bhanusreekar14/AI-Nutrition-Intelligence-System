@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.security import get_current_user
 from app.models.prediction import DeficiencyPredictionRequest, DeficiencyPredictionResponse
 from app.services.deficiency_prediction_service import DeficiencyPredictionService
+from app.services.prediction_history_service import PredictionHistoryService
 
 router = APIRouter()
 
@@ -21,7 +22,19 @@ def predict_deficiency_risk(
     current_user: dict = Depends(get_current_user)
 ) -> DeficiencyPredictionResponse:
     try:
-        return DeficiencyPredictionService.predict(request_in)
+        res = DeficiencyPredictionService.predict(request_in)
+
+        # Save historical snapshot with duplicate protection
+        try:
+            PredictionHistoryService.save_prediction_snapshot(
+                user_id=current_user["user_id"],
+                prediction=res,
+                req_features=request_in
+            )
+        except Exception:
+            pass
+
+        return res
     except ValueError as ve:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

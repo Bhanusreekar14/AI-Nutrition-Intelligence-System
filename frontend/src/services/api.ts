@@ -18,7 +18,9 @@ import {
   RecipeRecommendationRequest,
   WeeklyMealPlan,
   MealReplacementRequest,
-  MealReplacementResponse
+  MealReplacementResponse,
+  PredictionHistoryEntry,
+  PredictionProgress
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -201,5 +203,20 @@ export const replaceMealItem = async (
   payload: MealReplacementRequest
 ): Promise<MealReplacementResponse> => {
   const response = await apiClient.post<MealReplacementResponse>('/meal-plans/replace', payload);
+  return response.data;
+};
+
+// Longitudinal Progress Tracking Endpoints
+export const getPredictionHistory = async (weeks: number = 4): Promise<PredictionHistoryEntry[]> => {
+  const response = await apiClient.get<PredictionHistoryEntry[]>('/predict/history', {
+    params: { weeks }
+  });
+  return response.data;
+};
+
+export const getPredictionProgress = async (weeks: number = 4): Promise<PredictionProgress> => {
+  const response = await apiClient.get<PredictionProgress>('/predict/progress', {
+    params: { weeks }
+  });
   return response.data;
 };

@@ -351,3 +351,59 @@ export interface MealReplacementResponse {
   updated_weekly_plan: WeeklyMealPlan;
   medical_disclaimer: string;
 }
+
+export interface PredictionHistoryEntry {
+  id: string;
+  user_id: string;
+  predicted_class: string;
+  predicted_probability: number;
+  risk_score: number;
+  risk_level: string;
+  class_probabilities?: Record<string, number>;
+  shap_positive_features?: Array<{ feature: string; shap_value: number }>;
+  shap_negative_features?: Array<{ feature: string; shap_value: number }>;
+  symptoms_count: number;
+  serum_hemoglobin_g_dl?: number | null;
+  serum_vitamin_d_ng_ml?: number | null;
+  serum_vitamin_b12_pg_ml?: number | null;
+  serum_iron_ug_dl?: number | null;
+  serum_calcium_mg_dl?: number | null;
+  serum_folate_ng_ml?: number | null;
+  recorded_at: string;
+  model_version?: string | null;
+}
+
+export interface BiomarkerTrendPoint {
+  date: string;
+  hemoglobin?: number | null;
+  vitamin_d?: number | null;
+  vitamin_b12?: number | null;
+  iron?: number | null;
+  calcium?: number | null;
+  folate?: number | null;
+}
+
+export interface SymptomTrendPoint {
+  date: string;
+  symptoms_count: number;
+}
+
+export interface PredictionProgress {
+  status: 'complete' | 'insufficient_history';
+  message: string;
+  selected_weeks: number;
+  total_snapshots: number;
+  first_risk_score?: number | null;
+  latest_risk_score?: number | null;
+  risk_score_change?: number | null;
+  percentage_change?: number | null;
+  first_risk_level?: string | null;
+  latest_risk_level?: string | null;
+  risk_level_changed?: boolean | null;
+  transition_text?: string | null;
+  chronological_history: PredictionHistoryEntry[];
+  class_distribution: Record<string, number>;
+  symptom_trend: SymptomTrendPoint[];
+  biomarker_trend: BiomarkerTrendPoint[];
+  available_biomarkers: string[];
+}

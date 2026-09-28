@@ -226,9 +226,9 @@ export const PredictionPage: React.FC = () => {
     }
   };
 
-
-  const getRiskBadgeColor = (level: string) => {
-    switch (level.toLowerCase()) {
+  const getRiskBadgeColor = (level?: string) => {
+    const lvl = (level || '').toLowerCase();
+    switch (lvl) {
       case 'low': return { bg: '#dcfce7', text: '#15803d', border: '#86efac' };
       case 'moderate': return { bg: '#fef9c3', text: '#a16207', border: '#fde047' };
       case 'high': return { bg: '#ffedd5', text: '#c2410c', border: '#fdba74' };
@@ -236,6 +236,13 @@ export const PredictionPage: React.FC = () => {
       default: return { bg: '#e2e8f0', text: '#475569', border: '#cbd5e1' };
     }
   };
+
+  const topPosFeatures = result?.explanation?.top_positive_features || [];
+  const topNegFeatures = result?.explanation?.top_negative_features || [];
+  const classProbs = result?.class_probabilities || {};
+  const recFoods = recResult?.recommended_foods || [];
+  const targetNutrients = recResult?.targeted_nutrients || [];
+  const dietaryAdviceList = recResult?.dietary_advice || [];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-page)', paddingBottom: '3rem' }}>
@@ -309,7 +316,7 @@ export const PredictionPage: React.FC = () => {
                 Input Health & Nutrition Data
               </h2>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {formData.symptoms_count} symptoms selected
+                {formData.symptoms_count || 0} symptoms selected
               </span>
             </div>
 
@@ -412,7 +419,6 @@ export const PredictionPage: React.FC = () => {
                       onChange={(e) => setAllergiesInput(e.target.value)}
                     />
                   </div>
-
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
@@ -671,7 +677,7 @@ export const PredictionPage: React.FC = () => {
                       gap: '0.3rem'
                     }}
                   >
-                    <ShieldAlert size={14} /> {result.risk_level.toUpperCase()} RISK
+                    <ShieldAlert size={14} /> {(result.risk_level || 'UNKNOWN').toUpperCase()} RISK
                   </span>
                 </div>
 
@@ -684,7 +690,7 @@ export const PredictionPage: React.FC = () => {
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>CONFIDENCE PROBABILITY</div>
                     <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--primary-emerald)' }}>
-                      {(result.predicted_probability * 100).toFixed(1)}%
+                      {((result.predicted_probability || 0) * 100).toFixed(1)}%
                     </div>
                   </div>
                   <div>
@@ -701,7 +707,7 @@ export const PredictionPage: React.FC = () => {
                     <div 
                       style={{ 
                         height: '100%', 
-                        width: `${Math.min(100, Math.max(0, result.risk_score))}%`, 
+                        width: `${Math.min(100, Math.max(0, result.risk_score || 0))}%`,
                         background: getRiskBadgeColor(result.risk_level).text,
                         transition: 'width 0.5s ease-in-out'
                       }} 
@@ -717,8 +723,8 @@ export const PredictionPage: React.FC = () => {
                 </h4>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {Object.entries(result.class_probabilities).map(([className, prob]) => {
-                    const pct = (prob * 100).toFixed(1);
+                  {Object.entries(classProbs).map(([className, prob]) => {
+                    const pct = ((Number(prob) || 0) * 100).toFixed(1);
                     const isSelected = className === result.predicted_class;
                     return (
                       <div key={className}>
@@ -761,14 +767,14 @@ export const PredictionPage: React.FC = () => {
                     <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#c53030', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <TrendingUp size={16} /> Top Risk Factors (+SHAP)
                     </div>
-                    {result.explanation.top_positive_features.length === 0 ? (
+                    {topPosFeatures.length === 0 ? (
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>None identified</div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {result.explanation.top_positive_features.map((item, i) => (
+                        {topPosFeatures.map((item, i) => (
                           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
                             <span style={{ color: '#742a2a', fontWeight: 500 }}>{item.feature}</span>
-                            <span style={{ fontWeight: 700, color: '#e53e3e' }}>+{item.shap_value.toFixed(3)}</span>
+                            <span style={{ fontWeight: 700, color: '#e53e3e' }}>+{(item.shap_value || 0).toFixed(3)}</span>
                           </div>
                         ))}
                       </div>
@@ -780,14 +786,14 @@ export const PredictionPage: React.FC = () => {
                     <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#166534', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <TrendingDown size={16} /> Protective Factors (-SHAP)
                     </div>
-                    {result.explanation.top_negative_features.length === 0 ? (
+                    {topNegFeatures.length === 0 ? (
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>None identified</div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {result.explanation.top_negative_features.map((item, i) => (
+                        {topNegFeatures.map((item, i) => (
                           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
                             <span style={{ color: '#14532d', fontWeight: 500 }}>{item.feature}</span>
-                            <span style={{ fontWeight: 700, color: '#16a34a' }}>{item.shap_value.toFixed(3)}</span>
+                            <span style={{ fontWeight: 700, color: '#16a34a' }}>{(item.shap_value || 0).toFixed(3)}</span>
                           </div>
                         ))}
                       </div>
@@ -798,7 +804,6 @@ export const PredictionPage: React.FC = () => {
 
               {/* Personalized Food Recommendations Card */}
               <div className="app-card" style={{ padding: '1.5rem' }}>
-
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div>
                     <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -855,10 +860,10 @@ export const PredictionPage: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     
                     {/* Targeted Nutrients Badge list */}
-                    {recResult.targeted_nutrients && recResult.targeted_nutrients.length > 0 && (
+                    {targetNutrients.length > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', background: 'var(--bg-mint)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-mint)' }}>
                         <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-emerald)' }}>TARGETED NUTRIENTS:</span>
-                        {recResult.targeted_nutrients.map((n, idx) => (
+                        {targetNutrients.map((n, idx) => (
                           <span key={idx} className="badge badge-mint" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
                             {n}
                           </span>
@@ -867,14 +872,14 @@ export const PredictionPage: React.FC = () => {
                     )}
 
                     {/* Empty State */}
-                    {recResult.recommended_foods.length === 0 ? (
+                    {recFoods.length === 0 ? (
                       <div style={{ padding: '2rem 1rem', textAlign: 'center', background: '#f8fafc', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                         No matching food recommendations found for the selected dietary preferences and allergy constraints.
                       </div>
                     ) : (
                       /* Recommended Foods Cards List */
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                        {recResult.recommended_foods.map((food, idx) => (
+                        {recFoods.map((food, idx) => (
                           <div
                             key={idx}
                             style={{
@@ -964,11 +969,11 @@ export const PredictionPage: React.FC = () => {
                     )}
 
                     {/* Educational Dietary Guidance / Advice */}
-                    {recResult.dietary_advice && recResult.dietary_advice.length > 0 && (
+                    {dietaryAdviceList.length > 0 && (
                       <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', fontSize: '0.82rem', color: '#0369a1' }}>
                         <strong style={{ display: 'block', marginBottom: '0.25rem', color: '#0c4a6e' }}>Dietary Guidance:</strong>
                         <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
-                          {recResult.dietary_advice.map((advice, idx) => (
+                          {dietaryAdviceList.map((advice, idx) => (
                             <li key={idx} style={{ marginBottom: '0.15rem' }}>{advice}</li>
                           ))}
                         </ul>
@@ -976,27 +981,30 @@ export const PredictionPage: React.FC = () => {
                     )}
 
                     {/* Recommendation Medical Disclaimer */}
-                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', color: '#1e40af', fontSize: '0.78rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                      <Info size={16} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
-                      <div>
-                        <strong style={{ display: 'block', marginBottom: '0.1rem' }}>Recommendation Disclaimer:</strong>
-                        {recResult.medical_disclaimer}
+                    {recResult.medical_disclaimer && (
+                      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', color: '#1e40af', fontSize: '0.78rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                        <Info size={16} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                        <div>
+                          <strong style={{ display: 'block', marginBottom: '0.1rem' }}>Recommendation Disclaimer:</strong>
+                          {recResult.medical_disclaimer}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                   </div>
                 )}
               </div>
 
               {/* Medical Disclaimer Banner */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)', padding: '1rem', color: '#1e40af', fontSize: '0.82rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                <Info size={20} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
-                <div>
-                  <div style={{ fontWeight: 700, marginBottom: '0.2rem' }}>Medical Disclaimer</div>
-                  <div>{result.medical_disclaimer}</div>
+              {result.medical_disclaimer && (
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)', padding: '1rem', color: '#1e40af', fontSize: '0.82rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  <Info size={20} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                  <div>
+                    <div style={{ fontWeight: 700, marginBottom: '0.2rem' }}>Medical Disclaimer</div>
+                    <div>{result.medical_disclaimer}</div>
+                  </div>
                 </div>
-              </div>
-
+              )}
 
             </div>
           )}

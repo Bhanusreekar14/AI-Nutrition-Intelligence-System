@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -16,72 +17,74 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          {/* Public Auth Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+        <ErrorBoundary>
+          <Routes>
+            {/* Public Auth Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-          {/* Protected Application Routes */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <HealthProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/diary"
-            element={
-              <ProtectedRoute>
-                <FoodDiaryPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/symptoms"
-            element={
-              <ProtectedRoute>
-                <SymptomsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/blood-tests"
-            element={
-              <ProtectedRoute>
-                <BloodTestPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/predict"
-            element={
-              <ProtectedRoute>
-                <PredictionPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/recipes"
-            element={
-              <ProtectedRoute>
-                <RecipesPage />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Application Routes */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <HealthProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/diary"
+              element={
+                <ProtectedRoute>
+                  <FoodDiaryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/symptoms"
+              element={
+                <ProtectedRoute>
+                  <SymptomsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/blood-tests"
+              element={
+                <ProtectedRoute>
+                  <BloodTestPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/predict"
+              element={
+                <ProtectedRoute>
+                  <PredictionPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/recipes"
+              element={
+                <ProtectedRoute>
+                  <RecipesPage />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Root Redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Root Redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ErrorBoundary>
       </Router>
     </AuthProvider>
   );

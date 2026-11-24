@@ -17,11 +17,11 @@ __pycache__/
 
 # Environments & Secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+!*.env.example
 *.pem
+*.key
 
 # Virtual Environments
 venv/
@@ -40,3 +40,11 @@ ml/models/*.joblib
 .vscode/
 .idea/
 *.swp
+
+# Archives & Temporary files
+*.zip
+*.tar.gz
+*.tgz
+AI-Nutrition-Intelligence-System.zip
+AI-Nutrition-Intelligence-System/
+vite.config.ts.timestamp-*

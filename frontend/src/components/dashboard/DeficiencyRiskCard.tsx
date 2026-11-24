@@ -43,7 +43,9 @@ export const DeficiencyRiskCard: React.FC<Props> = ({ prediction, hasEnoughData 
 
   const { predicted_class, risk_score, risk_level, explanation, medical_disclaimer } = prediction;
   const isHealthy = predicted_class === 'Healthy';
-  const scorePercent = Math.min(Math.round(risk_score), 100);
+  const scorePercent = Math.min(Math.round(risk_score ?? 0), 100);
+  const posFeatures = explanation?.top_positive_features || [];
+  const negFeatures = explanation?.top_negative_features || [];
 
   return (
     <div className="app-card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
@@ -57,10 +59,10 @@ export const DeficiencyRiskCard: React.FC<Props> = ({ prediction, hasEnoughData 
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span className={`badge ${isHealthy ? 'badge-mint' : 'badge-amber'}`}>
-            {predicted_class.replace('_', ' ')}
+            {predicted_class ? predicted_class.replace('_', ' ') : 'N/A'}
           </span>
           <span className="badge badge-blue">
-            {risk_level}
+            {risk_level || 'N/A'}
           </span>
         </div>
       </div>
@@ -85,22 +87,30 @@ export const DeficiencyRiskCard: React.FC<Props> = ({ prediction, hasEnoughData 
       </div>
 
       {/* SHAP Key Drivers */}
-      {explanation && (explanation.top_positive_features.length > 0 || explanation.top_negative_features.length > 0) && (
+      {explanation && (posFeatures.length > 0 || negFeatures.length > 0) && (
         <div style={{ marginBottom: '1rem' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
             Key AI Feature Drivers (SHAP)
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-            {explanation.top_positive_features.map((feat) => (
-              <span key={feat.feature} className="badge badge-amber" style={{ fontSize: '0.725rem' }}>
-                ⚠️ {feat.feature.replace(/_/g, ' ')} (+{feat.shap_value.toFixed(2)})
-              </span>
-            ))}
-            {explanation.top_negative_features.map((feat) => (
-              <span key={feat.feature} className="badge badge-mint" style={{ fontSize: '0.725rem' }}>
-                ✅ {feat.feature.replace(/_/g, ' ')} ({feat.shap_value.toFixed(2)})
-              </span>
-            ))}
+            {posFeatures.map((feat, idx) => {
+              const val = typeof feat?.shap_value === 'number' ? feat.shap_value : (Number(feat?.shap_value) || 0);
+              const featName = (feat?.feature || '').replace(/_/g, ' ');
+              return (
+                <span key={feat?.feature || idx} className="badge badge-amber" style={{ fontSize: '0.725rem' }}>
+                  ⚠️ {featName} (+{val.toFixed(2)})
+                </span>
+              );
+            })}
+            {negFeatures.map((feat, idx) => {
+              const val = typeof feat?.shap_value === 'number' ? feat.shap_value : (Number(feat?.shap_value) || 0);
+              const featName = (feat?.feature || '').replace(/_/g, ' ');
+              return (
+                <span key={feat?.feature || idx} className="badge badge-mint" style={{ fontSize: '0.725rem' }}>
+                  ✅ {featName} ({val.toFixed(2)})
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

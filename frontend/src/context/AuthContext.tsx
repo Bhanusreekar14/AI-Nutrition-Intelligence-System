@@ -50,6 +50,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, pass: string) => Promise<{ error?: string }>;
   signUp: (fullName: string, email: string, pass: string) => Promise<{ error?: string }>;
+  signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -97,50 +98,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
-    // Timeout safety fallback (500ms max waiting for Supabase)
-    const timeoutId = setTimeout(() => {
-      if (isMounted) {
-        setLoading(false);
-      }
-    }, 500);
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    const hasOAuthCode = searchParams.has('code');
+    const hasOAuthToken = hashParams.has('access_token');
+    const isOAuthCallback = hasOAuthCode || hasOAuthToken;
+    const oauthCode = searchParams.get('code');
 
-    // Try Supabase auth session with timeout race
+    console.log('[OAuth-Debug 1] URL:', window.location.href);
+    console.log('[OAuth-Debug 2] OAuth callback detected:', isOAuthCallback, 'code:', oauthCode ? 'PRESENT' : 'ABSENT');
+
+    // Try Supabase auth session
     const fetchSupabaseSession = async () => {
       try {
-        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => 
-          setTimeout(() => resolve({ data: { session: null } }), 400)
-        );
-        const { data } = await Promise.race([
-          supabase.auth.getSession(),
-          timeoutPromise
-        ]);
-        
-        if (isMounted && data?.session) {
-          saveLocalSession(data.session.user, data.session);
+        if (hasOAuthCode && oauthCode) {
+          console.log('[OAuth-Debug 4] Calling supabase.auth.exchangeCodeForSession(code)...');
+          const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(oauthCode);
+          console.log('[OAuth-Debug 4 Result] exchangeData session:', exchangeData?.session ? exchangeData.session.user.email : 'NULL', 'error:', exchangeError);
+          
+          if (isMounted && exchangeData?.session) {
+            console.log('[OAuth-Debug 6] Saving PKCE session for user:', exchangeData.session.user.email);
+            saveLocalSession(exchangeData.session.user, exchangeData.session);
+          }
+        } else if (isOAuthCallback) {
+          console.log('[OAuth-Debug 3] Calling supabase.auth.getSession() for hash token...');
+          const { data, error } = await supabase.auth.getSession();
+          console.log('[OAuth-Debug 3 Result] data session:', data?.session ? data.session.user.email : 'NULL', 'error:', error);
+          if (isMounted && data?.session) {
+            console.log('[OAuth-Debug 6] Saving hash session for user:', data.session.user.email);
+            saveLocalSession(data.session.user, data.session);
+          }
+        } else {
+          // Standard startup session check (with 1.5s fallback for offline dev environment)
+          const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+            setTimeout(() => resolve({ data: { session: null } }), 1500)
+          );
+          const { data } = await Promise.race([
+            supabase.auth.getSession(),
+            timeoutPromise
+          ]);
+          console.log('[OAuth-Debug Standard Session] session:', data?.session ? data.session.user.email : 'NULL');
+          if (isMounted && data?.session) {
+            saveLocalSession(data.session.user, data.session);
+          }
         }
       } catch (err) {
-        console.warn('Supabase session check skipped/failed, using local mode:', err);
+        console.warn('[OAuth-Debug Error] Supabase session check error:', err);
       } finally {
         if (isMounted) {
           setLoading(false);
-          clearTimeout(timeoutId);
         }
       }
     };
 
     fetchSupabaseSession();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (isMounted && newSession) {
-        saveLocalSession(newSession.user, newSession);
+    // Listen for auth state changes (e.g. SIGNED_IN event from OAuth redirect)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('[OAuth-Debug 5] onAuthStateChange event:', event, 'user:', newSession?.user?.email);
+      if (isMounted) {
+        if (newSession) {
+          console.log('[OAuth-Debug 6] onAuthStateChange saving session for user:', newSession.user.email);
+          saveLocalSession(newSession.user, newSession);
+        } else if (event === 'SIGNED_OUT') {
+          saveLocalSession(null, null);
+        }
         setLoading(false);
       }
     });
 
     return () => {
       isMounted = false;
-      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
@@ -210,6 +239,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return {};
   };
 
+  const signInWithGoogle = async (): Promise<{ error?: string }> => {
+    try {
+      const redirectTo = `${window.location.origin}/`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+        },
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+      return {};
+    } catch (err: any) {
+      console.error('Google Sign-In Error:', err);
+      return { error: err?.message || 'Failed to initiate Google sign-in. Please try again.' };
+    }
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -220,7 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

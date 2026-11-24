@@ -6,6 +6,8 @@ import { Activity } from 'lucide-react';
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
 
+  console.log('[OAuth-Debug 7] ProtectedRoute evaluation - loading:', loading, 'user:', user?.email, 'URL:', window.location.href);
+
   if (loading) {
     return (
       <div style={{
@@ -24,6 +26,7 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   if (!user) {
+    console.log('[OAuth-Debug 9] ProtectedRoute redirecting to /login because user is null. Current URL:', window.location.href);
     return <Navigate to="/login" replace />;
   }
 

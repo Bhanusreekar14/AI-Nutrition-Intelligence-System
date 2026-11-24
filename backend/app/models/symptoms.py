@@ -16,8 +16,9 @@ class SymptomAssessmentResponse(BaseModel):
     symptom: str
     severity: str
     assessment_date: date
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
